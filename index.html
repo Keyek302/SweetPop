@@ -39,6 +39,8 @@ body{background:linear-gradient(160deg,#2a1650,#5b2a86 60%,#a23a8f);font-family:
 .lk .i::before{content:'🔒';position:absolute;right:-3px;top:-5px;font-size:.5em;z-index:2}
 .hint .i{animation:pulse .45s infinite alternate}
 @keyframes pulse{to{transform:scale(1.18);box-shadow:0 0 14px 4px #fff}}
+@keyframes nope{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.nope .i{animation:nope .3s}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20}
 #ov{position:fixed;inset:0;background:#000b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
 #ov h1{margin:0;font-size:34px}#ov p{margin:0;opacity:.85}
@@ -48,7 +50,7 @@ small{opacity:.6}
 <div id="hud"><div class="card">Level<b id="lv">1</b></div><div class="card">Score<b id="sc">0</b></div><div class="card">Moves<b id="mv">0</b></div><div class="card">Best lvl<b id="bs">1</b></div></div>
 <div id="bar"><i id="fill"></i></div>
 <div id="goal"></div><div id="b"></div><div id="tools"><button id="hint">💡 Hint</button><button id="mute">🔊</button></div>
-<small>Swipe or tap two neighbors. Match 4 = striped, 5 = 🍭 bomb.</small>
+<small>Swipe or tap two neighbors. Match 4 = striped, 5 = 🍭 bomb. · v6</small>
 <canvas id="fx"></canvas><div id="ov"><h1>🍬 Sweet Pop</h1><p>No ads. No paywalls. Ever.</p><button id="go">Play</button></div>
 <script>
 const N=8,K=['🍓','🍋','🍇','🍏','🍊','🫐'],C=['#e8344f','#f2c300','#8a3fd1','#3aa845','#f27a1a','#3a6ee8'];
@@ -88,7 +90,7 @@ const q=[...clr];for(let i=0;i<q.length;i++){const y=q[i]/N|0,x=q[i]%N,o=g[y][x]
 sp.forEach(s=>clr.delete(s.p[0]*N+s.p[1]));
 await clearSet(clr,combo);
 if(sp.length)sfx.special();sp.forEach(s=>{const o=g[s.p[0]][s.p[1]];if(!o)return;if(s.len>=5){o.t=-1;o.sp=3}else o.sp=s.dir=='h'?2:1;paint(o)})}}
-async function swap(a,b){if(busy||!playing)return;hintP=[];const A=g[a[0]][a[1]],O=g[b[0]][b[1]];if(A.lock||O.lock||jel[a[0]][a[1]]>0||jel[b[0]][b[1]]>0){sel=null;sfx.bad();render();return}busy=true;sel=null;g[a[0]][a[1]]=O;g[b[0]][b[1]]=A;sfx.swap();render();await sleep(260);
+async function swap(a,b){if(busy||!playing)return;hintP=[];const A=g[a[0]][a[1]],O=g[b[0]][b[1]];if(A.lock||O.lock||jel[a[0]][a[1]]>0||jel[b[0]][b[1]]>0){sel=null;sfx.bad();render();[A,O].forEach(o=>{o.el.classList.add('nope');setTimeout(()=>o.el.classList.remove('nope'),350)});return}busy=true;sel=null;g[a[0]][a[1]]=O;g[b[0]][b[1]]=A;sfx.swap();render();await sleep(260);
 if(A.sp==3||O.sp==3){moves--;sfx.bomb();const tt=A.sp==3&&O.sp==3?-2:A.sp==3?O.t:A.t,clr=new Set();for(let y=0;y<N;y++)for(let x=0;x<N;x++){const o=g[y][x];if(o&&(o.sp==3||tt==-2||o.t==tt))clr.add(y*N+x)}await clearSet(clr,2);await resolve(null)}
 else if(!findRuns().length){sfx.bad();g[a[0]][a[1]]=A;g[b[0]][b[1]]=O;render();await sleep(260);busy=false;return}
 else{moves--;hud();await resolve([a,b])}
@@ -102,8 +104,8 @@ function start(){$('ov').style.display='none';document.body.style.background=THE
 do{g=Array.from({length:N},()=>Array.from({length:N},()=>mk()))}while(findRuns().length||!hasMoves());
 for(let y=0;y<N;y++)for(let x=0;x<N;x++)g[y][x].from=y-N;addLocks();
 size();render();hud();playing=true;busy=false}
-function tap(r,c){if(busy||!inb([r,c]))return;hintP=[];if(!sel){sel=[r,c];render();return}
-const d=Math.abs(sel[0]-r)+Math.abs(sel[1]-c);if(d==0){sel=null;render()}else if(d==1){const f=sel;sel=null;swap(f,[r,c])}else{sel=[r,c];render()}}
+function tap(r,c){if(busy||!inb([r,c]))return;hintP=[];if(!sel){if(jel[r][c]>0||g[r][c].lock){sfx.bad();const e=g[r][c].el;e.classList.add('nope');setTimeout(()=>e.classList.remove('nope'),350);return}sel=[r,c];render();return}
+const d=Math.abs(sel[0]-r)+Math.abs(sel[1]-c);if(d==0){sel=null;render()}else if(d==1){const f=sel;sel=null;swap(f,[r,c])}else if(!(jel[r][c]>0||g[r][c].lock)){sel=[r,c];render()}}
 B.addEventListener('pointerdown',e=>{if(busy||!playing)return;const r=B.getBoundingClientRect();ps={x:e.clientX,y:e.clientY,c:Math.floor((e.clientX-r.left)/S),r:Math.floor((e.clientY-r.top)/S)}});
 B.addEventListener('pointermove',e=>{if(!ps||busy)return;const dx=e.clientX-ps.x,dy=e.clientY-ps.y;if(Math.max(Math.abs(dx),Math.abs(dy))>S*.4){const f=[ps.r,ps.c],t=Math.abs(dx)>Math.abs(dy)?[ps.r,ps.c+Math.sign(dx)]:[ps.r+Math.sign(dy),ps.c];ps=null;if(inb(f)&&inb(t))swap(f,t)}});
 addEventListener('pointerup',()=>{if(!ps)return;const p=ps;ps=null;tap(p.r,p.c)});
@@ -113,4 +115,4 @@ $('hint').onclick=()=>{if(busy||!playing)return;const m=findMove();if(!m)return;
 $('mute').onclick=()=>{mute=!mute;$('mute').textContent=mute?'🔇':'🔊'};
 size();hud();$('go').onclick=start;
 if(level>1){$('go').textContent='Continue: Level '+level;const b=document.createElement('button');b.textContent='New game';b.style.cssText='font-size:14px;background:#ffffff33;color:#fff;padding:8px 20px;margin-top:0';b.onclick=()=>{if(confirm('Reset your progress back to level 1?')){best=1;level=1;try{localStorage.removeItem('sp-best')}catch(e){}start()}};$('ov').appendChild(b)}
-</script><script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')==0)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script></body></html>
+</script><script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')==0){const had=navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!window.__r){window.__r=1;location.reload()}});addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script></body></html>
